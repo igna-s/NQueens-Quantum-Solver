@@ -26,6 +26,12 @@
 \usepackage{subcaption}
 \captionsetup{font=scriptsize, labelfont=bf, labelsep=period, skip=1pt}
 
+% --- TikZ Graphics ---
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{shapes.geometric, arrows, positioning, shapes.misc, arrows.meta}
+
 % --- Layout (adjusted for 3 pages) ---
 \usepackage[
     top=1.2cm, bottom=1.5cm,
@@ -198,7 +204,30 @@ Measurement collapses the system state, revealing the solution with a high proba
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.72\columnwidth]{grover_high_level.png}
+    \resizebox{0.72\columnwidth}{!}{
+    \begin{tikzpicture}[
+        node distance=1.5cm,
+        block/.style={rectangle, draw, fill=blue!20, text width=5cm, text centered, rounded corners, minimum height=1.5em},
+        decision/.style={rectangle, draw, fill=orange!20, text width=5cm, text centered, rounded corners, minimum height=1.5em},
+        line/.style={draw, -latex', thick}
+    ]
+
+    \node [block] (init) {Initialization: $H^{\otimes n} \ket{0}^{\otimes n}$};
+    \node [decision, below of=init] (oracle) {Oracle: $U_f$ marks solutions with $-1$ phase};
+    \node [block, fill=cyan!30, below of=oracle] (diffuser) {Diffuser: $2\ket{\psi_0}\bra{\psi_0} - I$};
+    \node [block, fill=green!30, below of=diffuser] (measure) {Measurement};
+    \node [below of=measure, node distance=1cm] (result) {Classical Solution};
+
+    \path [line] (init) -- (oracle);
+    \path [line] (oracle) -- (diffuser);
+    \path [line] (diffuser) -- (measure);
+    \path [line] (measure) -- (result);
+
+    % Loop arrow
+    \draw [line] (diffuser.west) -- ++(-1.5,0) |- node[anchor=west, pos=0.25, xshift=-1cm, yshift=0.3cm] {Repeat $\sim \frac{\pi}{4}\sqrt{N/M}$ times} (oracle.west);
+
+    \end{tikzpicture}
+    }
     \caption{Flow of Grover's algorithm for N-Queens.}
     \label{fig:high_level}
 \end{figure}
@@ -236,7 +265,22 @@ For $N\!=\!4$: $k\!=\!2$, total register of $n = Nk = 8$ qubits (Fig.~\ref{fig:e
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.72\columnwidth]{nqueens_encoding.png}
+    \resizebox{0.72\columnwidth}{!}{
+    \begin{tikzpicture}[
+        queen/.style={circle, fill=blue!80, text=white, minimum size=0.5cm, font=\bfseries\small}
+    ]
+    \draw[step=0.8cm,gray,very thin] (0,0) grid (3.2,3.2);
+    \node at (0.4, 3.2-0.4) [queen] {$Q_0$};
+    \node at (1.2+0.8, 3.2-1.2) [queen] {$Q_1$};
+    \node at (0.4, 3.2-2.0) [queen] {$Q_2$};
+    \node at (0.4+1.6, 3.2-2.8) [queen] {$Q_3$};
+
+    \node[anchor=west] at (4, 2.8) {$Q_0 \rightarrow$ Col 0 $\rightarrow |00\rangle$};
+    \node[anchor=west] at (4, 2.0) {$Q_1 \rightarrow$ Col 3 $\rightarrow |11\rangle$};
+    \node[anchor=west] at (4, 1.2) {$Q_2 \rightarrow$ Col 0 $\rightarrow |00\rangle$};
+    \node[anchor=west] at (4, 0.4) {$Q_3 \rightarrow$ Col 2 $\rightarrow |10\rangle$};
+    \end{tikzpicture}
+    }
     \caption{Encoding of $[1,3,0,2]$ for $N=4$: 2 qubits per queen.}
     \label{fig:encoding}
 \end{figure}
@@ -271,7 +315,22 @@ The oracle is the core component of the circuit. It applies a $-1$ phase exclusi
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.72\columnwidth]{oracle_structure.png}
+    \resizebox{0.72\columnwidth}{!}{
+    \begin{tikzpicture}[
+        node distance=3cm,
+        block/.style={rectangle, draw, fill=orange!20, text width=3cm, text centered, rounded corners, minimum height=2em},
+        line/.style={draw, -latex', ultra thick}
+    ]
+
+    \node [block] (compute) {Compute Flags};
+    \node [block, fill=red!20, right of=compute, node distance=4cm] (phase) {Phase Flip ($-1$)};
+    \node [block, right of=phase, node distance=4cm] (uncompute) {Uncompute Flags};
+
+    \path [line] (compute) -- (phase);
+    \path [line] (phase) -- (uncompute);
+
+    \end{tikzpicture}
+    }
     \caption{Structure: Compute $\to$ Phase Flip $\to$ Uncompute.}
     \label{fig:oracle}
 \end{figure}
@@ -282,7 +341,24 @@ For each pair $(i, j)$, $i < j$, a conflict is verified ($c_i = c_j$ or $|c_i - 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.72\columnwidth]{conflict_detection.png}
+    \resizebox{0.72\columnwidth}{!}{
+    \begin{tikzpicture}[
+        queen/.style={circle, fill=blue!80, text=white, minimum size=0.6cm, font=\bfseries}
+    ]
+    \draw[step=1cm,gray,very thin] (0,0) grid (4,4);
+    \node at (0.5,3.5) [queen] {$Q_0$};
+    \node at (1.5,2.5) [queen] {$Q_1$};
+
+    \draw[red, ultra thick, dashed, -{Latex[length=3mm]}] (0.5,3.5) -- (1.5,2.5);
+
+    \node[anchor=west, align=left] at (4.5, 2) {
+        \textbf{Conflict Detection}\\
+        Diagonal conflict:\\
+        $|c_0 - c_1| = |0 - 1| = 1$\\
+        $\Rightarrow$ Ancilla Flag = 1
+    };
+    \end{tikzpicture}
+    }
     \caption{Conflict detection $(c_i, c_j)$ with \texttt{match\_pattern}.}
     \label{fig:conflict}
 \end{figure}
@@ -327,7 +403,27 @@ The circuit (Fig.~\ref{fig:diffuser}) operates by: (1)~moving to the Hadamard ba
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.68\columnwidth]{diffuser_circuit.png}
+    \resizebox{0.68\columnwidth}{!}{
+    \begin{tikzpicture}
+    \foreach \i in {0,1,2,3,4,5,6,7} {
+        \draw (0,-\i*0.8) -- (8,-\i*0.8);
+        \node[anchor=east] at (0,-\i*0.8) {$q_\i$};
+        \draw[fill=white] (0.5,-\i*0.8-0.25) rectangle (1.1,-\i*0.8+0.25) node[pos=0.5, font=\small] {$H$};
+        \draw[fill=white] (1.5,-\i*0.8-0.25) rectangle (2.1,-\i*0.8+0.25) node[pos=0.5, font=\small] {$X$};
+        
+        \draw[fill=white] (5.9,-\i*0.8-0.25) rectangle (6.5,-\i*0.8+0.25) node[pos=0.5, font=\small] {$X$};
+        \draw[fill=white] (6.9,-\i*0.8-0.25) rectangle (7.5,-\i*0.8+0.25) node[pos=0.5, font=\small] {$H$};
+    }
+    \draw[fill=white] (2.9,-7*0.8-0.25) rectangle (3.5,-7*0.8+0.25) node[pos=0.5, font=\small] {$H$};
+    \draw[fill=white] (4.5,-7*0.8-0.25) rectangle (5.1,-7*0.8+0.25) node[pos=0.5, font=\small] {$H$};
+
+    \draw (4,0) -- (4,-7*0.8);
+    \foreach \i in {0,1,2,3,4,5,6} {
+        \filldraw (4,-\i*0.8) circle (3pt);
+    }
+    \draw (4,-7*0.8) circle (4pt) node[cross out, draw, inner sep=2pt] {};
+    \end{tikzpicture}
+    }
     \caption{Diffuser circuit for 8 state qubits.}
     \label{fig:diffuser}
 \end{figure}
@@ -365,7 +461,26 @@ The two valid solutions, $[1,3,0,2]$ and $[2,0,3,1]$, account for $\sim\!99.3\%$
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.78\columnwidth]{measurement_results.png}
+    \resizebox{0.78\columnwidth}{!}{
+    \begin{tikzpicture}
+    \begin{axis}[
+        ybar,
+        symbolic x coords={0000, 0111, 1001, 1010, 1100, 1111},
+        xtick=data,
+        nodes near coords,
+        nodes near coords align={vertical},
+        ymin=0, ymax=60,
+        ylabel={Probability (\%)},
+        xlabel={Measured States},
+        enlarge x limits=0.2,
+        bar width=20pt,
+        width=10cm,
+        height=6cm
+    ]
+    \addplot[fill=blue!30] coordinates {(0000,0.5) (0111,0.2) (1001,49.6) (1010,0.1) (1100,49.6) (1111,0.0)};
+    \end{axis}
+    \end{tikzpicture}
+    }
     \caption{Probability after 8 iterations ($N\!=\!4$). The two solutions dominate with $\sim$49.6\% each; noise $<1\%$.}
     \label{fig:results}
 \end{figure}
