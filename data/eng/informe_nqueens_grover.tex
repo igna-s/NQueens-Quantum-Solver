@@ -259,9 +259,6 @@ The optimal number of iterations is:
 \end{equation}
 For $N\!=\!4$: $\mathcal{N}\!=\!256$, $M\!=\!2$, $\theta \approx 0.177$~rad,
 $t^*\!=\!8$, $P(\text{success})\!\approx\!99.3\%$.
-\textbf{Note:} If $t^*$ is exceeded, the probability \emph{decreases} --- the
-algorithm "overshoots" the solution. This phenomenon has no classical analog.
-
 % ======================== 3. ENCODING ========================
 \section{Quantum Encoding}
 
@@ -329,6 +326,9 @@ to states representing valid configurations, in three stages (Fig.~\ref{fig:orac
 For each pair $(i, j)$, $i < j$, a conflict ($c_i = c_j$ or $|c_i - c_j| = j - i$)
 is checked through \textbf{explicit pattern enumeration} (Fig.~\ref{fig:conflict}).
 
+\vspace{0.2cm}
+\noindent\textbf{Computational Cost:} This verification minimizes width by applying $X$ gates \textit{in-place}, but its depth scales as $\BigO(N^3 \log^2 N)$ due to the generalized Toffoli (MCX) gates required for pattern evaluation. This explains the massive resource cost for boards with $N \ge 5$.
+
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.72\columnwidth]{conflict_detection.png}
@@ -376,6 +376,26 @@ $H \cdot \text{MCX} \cdot H$ trick implements an MCZ (controlled phase):
 For the oracle to be unitary and reusable between iterations, ancillas must return
 to $\ket{0}$. The Compute stage is undone by applying the same operations in reverse
 order. Since $X$ and MCX are self-inverses, this inversion is straightforward.
+
+\vspace{0.3cm}
+\noindent
+\colorbox{boxbg}{%
+\begin{minipage}{\dimexpr\columnwidth-2\fboxsep\relax}
+\vspace{2pt}
+{\small\sffamily\bfseries\color{accent} ENCODING COMPARISON}\par\vspace{1pt}
+{\small\itshape
+Unlike formulations based on quantum annealing or Rydberg
+atoms~\cite{tabi2020}, and spatial mappings that use $N^2$
+qubits by assigning one to each square~\cite{naik2018, nahimovs2023},
+the column encoding approach presented here requires only
+$N \lceil\log_2 N\rceil$ state qubits. Although this drastically reduces
+the required Hilbert space and guarantees by construction the absence
+of row conflicts, it comes at the cost of a deeper decision oracle
+to resolve the remaining combinatorial constraints.
+}
+\vspace{2pt}
+\end{minipage}}
+\vspace{0.3cm}
 
 % ======================== 5. DIFFUSER ========================
 \section{Grover's Diffuser}
@@ -454,6 +474,7 @@ computational states and measuring the flags:
 The \textbf{10 classical solutions} (obtained via brute force with
 \texttt{classical\_solutions}) resulted in 0 active flags in all cases.
 Tested negative cases included:
+\columnbreak
 \begin{itemize}
     \item $[0,0,0,0,0]$: all in the same column.
     \item $[0,1,2,3,4]$: main diagonal.

@@ -315,6 +315,8 @@ Para $N\!=\!4$, $2^2 = 4 = N$, no se necesitan; para $N\!=\!5$
         5 & 3 & 15 & 10 & 5 & 30 & 10 \\
         6 & 3 & 18 & 15 & 6 & 39 & 4  \\
         \bottomrule
+        6 & 3 & 18 & 15 & 6 & 39 & 4  \\
+        \bottomrule
     \end{tabular}
 \end{table}
 
@@ -339,6 +341,9 @@ Para cada par $(i, j)$, $i < j$, se verifica conflicto
 ($c_i = c_j$ o $|c_i - c_j| = j - i$)
 mediante \textbf{enumeraci\'on expl\'icita de patrones}
 (Fig.~\ref{fig:conflict}).
+
+\vspace{0.2cm}
+\noindent\textbf{Costo Computacional:} Esta verificaci\'on minimiza el ancho aplicando compuertas $X$ \textit{in-place}, pero su profundidad escala como $\BigO(N^3 \log^2 N)$ debido a las Toffoli generalizadas (MCX) requeridas. Esto explica el enorme costo en $N \ge 5$.
 
 \begin{figure}[H]
     \centering
@@ -392,6 +397,26 @@ Para que el or\'aculo sea unitario y reutilizable entre iteraciones,
 las ancillas deben volver a $\ket{0}$. Se deshace la etapa de Compute
 aplicando las mismas operaciones en orden inverso. Dado que $X$ y MCX
 son autoinversas, esta inversi\'on es directa.
+
+\vspace{0.3cm}
+\noindent
+\colorbox{boxbg}{%
+\begin{minipage}{\dimexpr\columnwidth-2\fboxsep\relax}
+\vspace{2pt}
+{\small\sffamily\bfseries\color{accent} COMPARACI\'ON DE CODIFICACI\'ON}\par\vspace{1pt}
+{\small\itshape
+A diferencia de formulaciones basadas en recocido cu\'antico
+u \'atomos de Rydberg~\cite{tabi2020}, y de mapeos espaciales que utilizan
+$N^2$ qubits asignando uno a cada casillero~\cite{naik2018, nahimovs2023},
+el enfoque de codificaci\'on por columna presentado aqu\'i requiere solo
+$N \lceil\log_2 N\rceil$ qubits de estado. Aunque esto reduce dr\'asticamente
+el espacio de Hilbert necesario y garantiza por construcci\'on que no haya
+conflictos de fila, conlleva el costo de un or\'aculo de decisi\'on con
+mayor profundidad para resolver el resto de las restricciones combinatorias.
+}
+\vspace{2pt}
+\end{minipage}}
+\vspace{0.3cm}
 
 % ======================== 5. DIFUSOR ========================
 \section{El difusor de Grover}
