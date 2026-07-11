@@ -259,6 +259,9 @@ The optimal number of iterations is:
 \end{equation}
 For $N\!=\!4$: $\mathcal{N}\!=\!256$, $M\!=\!2$, $\theta \approx 0.177$~rad,
 $t^*\!=\!8$, $P(\text{success})\!\approx\!99.3\%$.
+\textbf{Note:} If $t^*$ is exceeded, the probability \emph{decreases}
+--- the algorithm ``overshoots'' the solution.
+This phenomenon has no classical analogue.
 % ======================== 3. ENCODING ========================
 \section{Quantum Encoding}
 
@@ -295,7 +298,8 @@ outside $[0, N)$. For $N\!=\!4$, $2^2 = 4 = N$, they are not needed; for $N\!=\!
     \centering
     \caption{Circuit resources according to $N$.}
     \label{tab:resources}
-    \scriptsize
+    \small
+    \renewcommand{\arraystretch}{1.3}
     \begin{tabular}{@{}ccccccc@{}}
         \toprule
         $N$ & $k$ & State & Pair flags & Range flags & Total & Sols. \\
@@ -316,7 +320,7 @@ to states representing valid configurations, in three stages (Fig.~\ref{fig:orac
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.72\columnwidth]{oracle_structure.png}
+    \includegraphics[width=0.85\columnwidth]{oracle_structure.png}
     \caption{Structure: Compute $\to$ Phase Flip $\to$ Uncompute.}
     \label{fig:oracle}
 \end{figure}
@@ -331,7 +335,7 @@ is checked through \textbf{explicit pattern enumeration} (Fig.~\ref{fig:conflict
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.72\columnwidth]{conflict_detection.png}
+    \includegraphics[width=0.85\columnwidth]{conflict_detection.png}
     \caption{Conflict detection $(c_i, c_j)$ with \texttt{match\_pattern}.}
     \label{fig:conflict}
 \end{figure}
@@ -384,9 +388,9 @@ order. Since $X$ and MCX are self-inverses, this inversion is straightforward.
 \vspace{2pt}
 {\small\sffamily\bfseries\color{accent} ENCODING COMPARISON}\par\vspace{1pt}
 {\small\itshape
-Unlike formulations based on quantum annealing or Rydberg
-atoms~\cite{tabi2020}, and spatial mappings that use $N^2$
-qubits by assigning one to each square~\cite{naik2018, nahimovs2023},
+Unlike formulations based on special-purpose quantum simulators
+with atoms in optical lattices~\cite{torggler2019}, and spatial mappings that use $N^2$
+qubits by assigning one to each square~\cite{jha2018, santhosh2023},
 the column encoding approach presented here requires only
 $N \lceil\log_2 N\rceil$ state qubits. Although this drastically reduces
 the required Hilbert space and guarantees by construction the absence
@@ -577,18 +581,18 @@ reduce circuit depth.
     ``\href{https://doi.org/10.1137/S0097539796300933}{Strengths and weaknesses of quantum computing},''
     \textit{SIAM J.\ Comput.}, vol.\,26, no.\,5, pp.\,1510--1523, 1997.
 
-    \bibitem{naik2018}
+    \bibitem{jha2018}
     R.~Jha, D.~Das, A.~Dash, S.~Jayaraman, B.\,K.~Behera, and P.\,K.~Panigrahi,
     ``\href{https://arxiv.org/abs/1806.10221}{A novel quantum N-queens solver algorithm and its simulation
     and application to satellite communication using IBM Quantum Experience},''
     arXiv:1806.10221 [quant-ph], 2018.
 
-    \bibitem{nahimovs2023}
+    \bibitem{santhosh2023}
     S.\,G.\,S.~Santhosh, P.~Joshi, A.~Barui, and P.\,K.~Panigrahi,
     ``\href{https://arxiv.org/abs/2312.16312}{A quantum approach to solve N-queens problem},''
     arXiv:2312.16312 [quant-ph], 2023.
 
-    \bibitem{tabi2020}
+    \bibitem{torggler2019}
     V.~Torggler, P.~Aumann, H.~Ritsch, and W.~Lechner,
     ``\href{https://doi.org/10.22331/q-2019-06-03-149}{A quantum N-queens solver},''
     \textit{Quantum}, vol.\,3, p.\,149, 2019.
