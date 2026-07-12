@@ -157,7 +157,7 @@ eliminando conflictos de fila por construcci\'on. El or\'aculo detecta conflicto
 de columna y diagonal mediante enumeraci\'on expl\'icita de patrones y qubits flag,
 aplicando fase $-1$ a las configuraciones v\'alidas a trav\'es del esquema
 \emph{compute--phase--uncompute}. Se verifica la correcci\'on completa para
-$N = 4$ (14~qubits, 8~iteraciones, $P(\text{\'exito}) \approx 99.3\%$) y se
+$N = 4$ (14~qubits, 8~iteraciones, $P(\text{\'exito}) \approx 99.6\%$) y se
 valida el or\'aculo de forma aislada para $N = 5$ (30~qubits), confirmando que
 las 10 soluciones conocidas son correctamente identificadas.
 Se discuten las limitaciones de escalabilidad y posibles optimizaciones
@@ -261,7 +261,7 @@ El n\'umero \'optimo de iteraciones es:
     \theta = 2\arcsin\!\sqrt{\frac{M}{\mathcal{N}}}
 \end{equation}
 Para $N\!=\!4$: $\mathcal{N}\!=\!256$, $M\!=\!2$, $\theta \approx 0.177$~rad,
-$t^*\!=\!8$, $P(\text{\'exito})\!\approx\!99.3\%$.
+$t^*\!=\!8$, $P(\text{\'exito})\!\approx\!99.6\%$.
 \textbf{Nota:} Si se excede $t^*$, la probabilidad \emph{disminuye}
 --- el algoritmo ``pasa de largo'' la soluci\'on.
 Este fen\'omeno no tiene an\'alogo cl\'asico.
@@ -474,7 +474,7 @@ Para $N = 4$, el circuito completo se simul\'o con el backend
 \end{table}
 
 Las dos soluciones v\'alidas, $[1,3,0,2]$ y $[2,0,3,1]$,
-concentran $\sim\!99.3\%$ de la probabilidad total
+concentran $\sim\!99.6\%$ de la probabilidad total
 ($\sim$49.6\% cada una, Fig.~\ref{fig:results}).
 La decodificaci\'on del bitstring medido se realiza invirtiendo
 el orden de bits (Qiskit imprime MSB primero) y reconstruyendo
@@ -538,7 +538,7 @@ por par de $\BigO(N)$ a $\BigO(\text{poly}(k))$.
         \midrule
         4 & 14 & 8    & S\'i (\texttt{statevector}) \\
         5 & 30 & 44   & Solo or\'aculo (\texttt{MPS}) \\
-        6 & 39 & $\sim$600 & No (simulador cl\'asico) \\
+        6 & 39 & $\sim$200 & No (simulador cl\'asico) \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -554,7 +554,7 @@ cu\'anticos para reducir la profundidad.
 \begin{enumerate}
     \item \textbf{Correcci\'on verificada.}
           Para $N\!=\!4$, el algoritmo completo encuentra las 2~soluciones
-          con $P \approx 99.3\%$. Para $N\!=\!5$, el or\'aculo clasifica
+          con $P \approx 99.6\%$. Para $N\!=\!5$, el or\'aculo clasifica
           correctamente las 10 soluciones y rechaza todos los casos
           inv\'alidos testeados.
 

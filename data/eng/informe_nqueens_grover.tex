@@ -156,7 +156,7 @@ qubits per queen to represent its column, eliminating row conflicts by construct
 The oracle detects column and diagonal conflicts through explicit pattern enumeration
 and flag qubits, applying a $-1$ phase to valid configurations via the
 \emph{compute--phase--uncompute} scheme. Full correctness is verified for $N = 4$
-(14 qubits, 8 iterations, $P(\text{success}) \approx 99.3\%$), and the oracle is
+(14 qubits, 8 iterations, $P(\text{success}) \approx 99.6\%$), and the oracle is
 validated in isolation for $N = 5$ (30 qubits), confirming that all 10 known solutions
 are correctly identified. Scalability limitations and potential optimizations using
 quantum adders are discussed.
@@ -258,7 +258,7 @@ The optimal number of iterations is:
     \theta = 2\arcsin\!\sqrt{\frac{M}{\mathcal{N}}}
 \end{equation}
 For $N\!=\!4$: $\mathcal{N}\!=\!256$, $M\!=\!2$, $\theta \approx 0.177$~rad,
-$t^*\!=\!8$, $P(\text{success})\!\approx\!99.3\%$.
+$t^*\!=\!8$, $P(\text{success})\!\approx\!99.6\%$.
 \textbf{Note:} If $t^*$ is exceeded, the probability \emph{decreases}
 --- the algorithm ``overshoots'' the solution.
 This phenomenon has no classical analogue.
@@ -454,7 +454,7 @@ backend (\texttt{statevector} method) for 4096 shots.
     \end{tabular}
 \end{table}
 
-The two valid solutions, $[1,3,0,2]$ and $[2,0,3,1]$, concentrate $\sim\!99.3\%$
+The two valid solutions, $[1,3,0,2]$ and $[2,0,3,1]$, concentrate $\sim\!99.6\%$
 of the total probability ($\sim$49.6\% each, Fig.~\ref{fig:results}).
 Decoding the measured bitstring is done by reversing the bit order (Qiskit prints
 MSB first) and reconstructing each queen's column:
@@ -514,7 +514,7 @@ comparisons, reducing MCX gates per pair from $\BigO(N)$ to $\BigO(\text{poly}(k
         \midrule
         4 & 14 & 8    & Yes (\texttt{statevector}) \\
         5 & 30 & 44   & Oracle only (\texttt{MPS}) \\
-        6 & 39 & $\sim$600 & No (classical simulator) \\
+        6 & 39 & $\sim$200 & No (classical simulator) \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -529,7 +529,7 @@ reduce circuit depth.
 
 \begin{enumerate}
     \item \textbf{Verified Correctness.}
-          For $N\!=\!4$, the full algorithm finds the 2 solutions with $P \approx 99.3\%$.
+          For $N\!=\!4$, the full algorithm finds the 2 solutions with $P \approx 99.6\%$.
           For $N\!=\!5$, the oracle correctly classifies the 10 solutions and rejects
           all tested invalid cases.
 
