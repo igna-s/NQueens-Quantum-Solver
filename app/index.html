@@ -3,28 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grover N=4 — Explorador de Circuito Cuántico</title>
+<title>Grover N=4 — Explorador de Circuito Cuántico | UNLP</title>
+<meta name="description" content="Explorador visual interactivo del algoritmo de Grover para el problema de N-Reinas (N=4). Codificación por columna, oráculo basado en enumeración de patrones. UNLP - Introducción a Arq. Comp. Cuánticas.">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #060912;
-  --surf: #0c1322;
-  --surf2: #111c30;
-  --border: rgba(255,255,255,0.07);
-  --text: #e2e8f0;
-  --dim: #64748b;
-  --H: #22d3ee; --X: #f87171; --MCX: #c084fc; --phase: #fbbf24;
-  --measure: #34d399; --oracle: #fb923c; --diffuser: #38bdf8;
-  --compute: #4ade80; --uncompute: #86efac; --pair: #60a5fa;
-  --conflict: #f59e0b; --iteration: #a78bfa; --root: #818cf8;
-  --I: #475569;
+  --bg: #070c19;
+  --surf: #0c1628;
+  --surf2: #112038;
+  --border: rgba(45,106,182,0.13);
+  --text: #d8e2f0;
+  --dim: #6e85a6;
+  --H: #5aafe0; --X: #cf6060; --MCX: #8a70c8; --phase: #c49410;
+  --measure: #50a878; --oracle: #c88540; --diffuser: #5090d0;
+  --compute: #55b055; --uncompute: #75d075; --pair: #5888d0;
+  --conflict: #c49410; --iteration: #2D6AB6; --root: #1A3C6E;
+  --I: #4a6080;
+  --accent: #2D6AB6;
+  --gold: #B8860B;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
 
 /* HEADER */
-header{background:linear-gradient(135deg,#0c1322 0%,#180535 100%);border-bottom:1px solid var(--border);padding:1.25rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:2rem;flex-wrap:wrap}
-.htitle h1{font-size:1.4rem;font-weight:700;background:linear-gradient(135deg,#a78bfa,#38bdf8,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+header{background:linear-gradient(135deg,#0c1628 0%,#1A3C6E 100%);border-bottom:1px solid var(--border);padding:1.25rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:2rem;flex-wrap:wrap}
+.htitle h1{font-size:1.4rem;font-weight:700;background:linear-gradient(135deg,#2D6AB6,#c49410,#5aafe0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .htitle p{color:var(--dim);font-size:.78rem;margin-top:.2rem;font-family:'JetBrains Mono',monospace}
 .hstats{display:flex;gap:1.5rem;flex-wrap:wrap}
 .sp{display:flex;flex-direction:column;align-items:center}
@@ -34,7 +37,7 @@ header{background:linear-gradient(135deg,#0c1322 0%,#180535 100%);border-bottom:
 /* BREADCRUMB */
 .bc{background:var(--surf);border-bottom:1px solid var(--border);padding:.6rem 2rem;display:flex;align-items:center;gap:.4rem;font-size:.82rem;overflow-x:auto;white-space:nowrap}
 .bci{display:inline-flex;align-items:center;gap:.4rem;cursor:pointer;color:var(--dim);padding:.2rem .5rem;border-radius:6px;transition:all .2s}
-.bci:hover{color:var(--text);background:rgba(255,255,255,0.05)}
+.bci:hover{color:var(--text);background:rgba(45,106,182,0.1)}
 .bci.active{color:var(--text);font-weight:600;pointer-events:none}
 .bcs{color:var(--dim);opacity:.4}
 
@@ -44,10 +47,10 @@ header{background:linear-gradient(135deg,#0c1322 0%,#180535 100%);border-bottom:
 .wires{display:flex;flex-direction:column;gap:3px;min-width:fit-content}
 .wire-row{display:flex;align-items:center;height:22px}
 .wname{width:55px;min-width:55px;font-size:.65rem;font-family:'JetBrains Mono',monospace;color:var(--dim);text-align:right;padding-right:8px;flex-shrink:0}
-.wtrack{flex:1;min-width:600px;height:2px;background:rgba(255,255,255,0.08);position:relative;border-radius:1px}
-.wtrack.active{background:rgba(255,255,255,0.25)}
+.wtrack{flex:1;min-width:600px;height:2px;background:rgba(45,106,182,0.1);position:relative;border-radius:1px}
+.wtrack.active{background:rgba(45,106,182,0.3)}
 .wgates{position:absolute;top:50%;transform:translateY(-50%);left:0;right:0;display:flex;align-items:center;height:20px}
-.wgate{position:absolute;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-family:'JetBrains Mono',monospace;font-weight:600;color:#000;cursor:pointer;transition:filter .2s;white-space:nowrap;padding:0 4px;overflow:hidden}
+.wgate{position:absolute;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-family:'JetBrains Mono',monospace;font-weight:600;color:#000;cursor:pointer;transition:filter .2s;white-space:nowrap;padding:0 6px;overflow:hidden;text-overflow:ellipsis;min-width:40px}
 .wgate:hover{filter:brightness(1.3)}
 
 /* MAIN */
@@ -59,7 +62,12 @@ header{background:linear-gradient(135deg,#0c1322 0%,#180535 100%);border-bottom:
 .iname{font-size:1rem;font-weight:600;margin-bottom:.2rem}
 .idesc{font-size:.82rem;color:var(--dim);line-height:1.6}
 .istats{display:flex;gap:.6rem;margin-top:.7rem;flex-wrap:wrap}
-.istat{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:.2rem .55rem;font-size:.7rem;font-family:'JetBrains Mono',monospace}
+.istat{background:rgba(45,106,182,0.06);border:1px solid var(--border);border-radius:6px;padding:.2rem .55rem;font-size:.7rem;font-family:'JetBrains Mono',monospace}
+
+/* EXPLANATION BOX */
+.expl-box{background:linear-gradient(135deg,rgba(26,60,110,0.12),rgba(45,106,182,0.06));border:1px solid rgba(45,106,182,0.2);border-left:3px solid var(--accent);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1.25rem;font-size:.84rem;line-height:1.7;color:var(--text)}
+.expl-box .expl-title{font-size:.68rem;text-transform:uppercase;letter-spacing:.15em;color:var(--accent);margin-bottom:.5rem;font-weight:600;font-family:'JetBrains Mono',monospace}
+.expl-box em{color:var(--gold);font-style:normal;font-weight:500}
 
 /* GRID */
 .section-hdr{font-size:.7rem;text-transform:uppercase;letter-spacing:.15em;color:var(--dim);margin-bottom:.9rem}
@@ -68,7 +76,7 @@ header{background:linear-gradient(135deg,#0c1322 0%,#180535 100%);border-bottom:
 /* GATE CARD */
 .gcard{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:.9rem 1.1rem;transition:all .2s;position:relative;overflow:hidden}
 .gcard:not(.leaf){cursor:pointer}
-.gcard:not(.leaf):hover{transform:translateY(-2px);border-color:rgba(255,255,255,0.14);box-shadow:0 8px 30px rgba(0,0,0,.45)}
+.gcard:not(.leaf):hover{transform:translateY(-2px);border-color:rgba(45,106,182,0.25);box-shadow:0 8px 30px rgba(0,0,0,.45)}
 .gcard::after{content:'';position:absolute;inset:0;border-radius:12px;opacity:0;transition:opacity .2s;pointer-events:none}
 .gcard:not(.leaf):hover::after{opacity:1}
 .ctop{display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem}
@@ -84,17 +92,17 @@ header{background:linear-gradient(135deg,#0c1322 0%,#180535 100%);border-bottom:
 .dpanel{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.4rem;margin-top:1.25rem}
 .dpanel h3{font-size:.7rem;text-transform:uppercase;letter-spacing:.15em;color:var(--dim);margin-bottom:.9rem}
 .gatelist{display:flex;flex-wrap:wrap;gap:.4rem}
-.gpill{background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;padding:.3rem .7rem;font-size:.75rem;font-family:'JetBrains Mono',monospace}
+.gpill{background:rgba(45,106,182,0.06);border:1px solid var(--border);border-radius:6px;padding:.3rem .7rem;font-size:.75rem;font-family:'JetBrains Mono',monospace}
 
 /* BACK BTN */
-.back-btn{display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;padding:.4rem .9rem;cursor:pointer;font-size:.82rem;color:var(--dim);transition:all .2s;margin-bottom:1rem}
-.back-btn:hover{color:var(--text);background:rgba(255,255,255,0.09)}
+.back-btn{display:inline-flex;align-items:center;gap:.4rem;background:rgba(45,106,182,0.08);border:1px solid var(--border);border-radius:8px;padding:.4rem .9rem;cursor:pointer;font-size:.82rem;color:var(--dim);transition:all .2s;margin-bottom:1rem}
+.back-btn:hover{color:var(--text);background:rgba(45,106,182,0.15)}
 
 /* PROB DISPLAY */
 .prob-box{margin-top:1rem;padding:.9rem;background:rgba(0,0,0,.3);border-radius:8px}
 .prob-row{display:flex;align-items:center;gap:.8rem;margin-bottom:.5rem;font-size:.78rem;font-family:'JetBrains Mono',monospace}
 .prob-lbl{width:130px;white-space:nowrap}
-.prob-track{flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden}
+.prob-track{flex:1;height:6px;background:rgba(45,106,182,0.1);border-radius:3px;overflow:hidden}
 .prob-fill{height:100%;border-radius:3px}
 .prob-val{width:45px;text-align:right;color:var(--dim)}
 
@@ -104,7 +112,7 @@ header{background:linear-gradient(135deg,#0c1322 0%,#180535 100%);border-bottom:
 
 /* ACTION BUTTONS & MODAL */
 .run-btn {
-  background: var(--root);
+  background: var(--accent);
   color: #fff;
   border: none;
   padding: 0.5rem 1rem;
@@ -133,8 +141,13 @@ header{background:linear-gradient(135deg,#0c1322 0%,#180535 100%);border-bottom:
 /* SEPARATOR */
 .sep{height:1px;background:var(--border);margin:1.25rem 0}
 
+/* BIBLIO SECTION */
+.biblio-box{background:rgba(184,134,11,0.06);border:1px solid rgba(184,134,11,0.2);border-left:3px solid var(--gold);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1.25rem;font-size:.82rem;line-height:1.65;color:var(--text)}
+.biblio-box .biblio-title{font-size:.68rem;text-transform:uppercase;letter-spacing:.15em;color:var(--gold);margin-bottom:.5rem;font-weight:600;font-family:'JetBrains Mono',monospace}
+.biblio-box .ref{color:var(--dim);font-size:.75rem;font-style:italic;margin-top:.6rem;line-height:1.5}
+
 ::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:3px}
+::-webkit-scrollbar-thumb{background:rgba(45,106,182,.2);border-radius:3px}
 
 @media(max-width:700px){
   header{flex-direction:column}
@@ -152,18 +165,18 @@ header{background:linear-gradient(135deg,#0c1322 0%,#180535 100%);border-bottom:
        <button id="btn-grover" class="run-btn" onclick="runBackend('run_grover')">▶ Correr N-Queens Grover</button>
        <button id="btn-qaoa" class="run-btn" onclick="runBackend('run_qaoa')" style="background: var(--diffuser)">▶ Correr N-Queens QAOA</button>
        <button id="btn-c" class="run-btn" onclick="runBackend('run_c')" style="background: var(--measure)">▶ Correr N-Queens Clásico (C)</button>
-       <a href="nqueens_grover.py" class="run-btn" style="background: var(--dim); text-decoration:none; display:inline-block" download>⬇️ Grover .py</a>
-       <a href="nqueens_qaoa.py" class="run-btn" style="background: var(--dim); text-decoration:none; display:inline-block" download>⬇️ QAOA .py</a>
-       <a href="nreinas.c" class="run-btn" style="background: var(--dim); text-decoration:none; display:inline-block" download>⬇️ nreinas.c</a>
+       <a href="nqueens_grover.py" class="run-btn" style="background: var(--I); text-decoration:none; display:inline-block" download>⬇️ Grover .py</a>
+       <a href="nqueens_qaoa.py" class="run-btn" style="background: var(--I); text-decoration:none; display:inline-block" download>⬇️ QAOA .py</a>
+       <a href="nreinas.c" class="run-btn" style="background: var(--I); text-decoration:none; display:inline-block" download>⬇️ nreinas.c</a>
     </div>
   </div>
   <div class="hstats">
-    <div class="sp"><span class="v" style="color:#a78bfa">14</span><span class="l">Qubits</span></div>
-    <div class="sp"><span class="v" style="color:#38bdf8">8</span><span class="l">Iteraciones</span></div>
-    <div class="sp"><span class="v" style="color:#34d399">256</span><span class="l">Estados</span></div>
-    <div class="sp"><span class="v" style="color:#fbbf24">2</span><span class="l">Soluciones</span></div>
-    <div class="sp"><span class="v" style="color:#f87171">41,221</span><span class="l">Profundidad</span></div>
-    <div class="sp"><span class="v" style="color:#4ade80">99.3%</span><span class="l">P(éxito)</span></div>
+    <div class="sp"><span class="v" style="color:#2D6AB6">14</span><span class="l">Qubits</span></div>
+    <div class="sp"><span class="v" style="color:#5aafe0">8</span><span class="l">Iteraciones</span></div>
+    <div class="sp"><span class="v" style="color:#c49410">256</span><span class="l">Estados</span></div>
+    <div class="sp"><span class="v" style="color:#B8860B">2</span><span class="l">Soluciones</span></div>
+    <div class="sp"><span class="v" style="color:#cf6060">41.221</span><span class="l">Profundidad</span></div>
+    <div class="sp"><span class="v" style="color:#55b055">99.3%</span><span class="l">P(éxito)</span></div>
   </div>
 </header>
 
@@ -202,9 +215,9 @@ const QDESC  = [
   'Flag conflicto par (1,3)', 'Flag conflicto par (2,3)',
 ];
 const QCOLORS = [
-  '#38bdf8','#0ea5e9','#818cf8','#6366f1',
-  '#a78bfa','#9333ea','#f472b6','#ec4899',
-  '#4ade80','#22c55e','#86efac','#16a34a','#bbf7d0','#15803d'
+  '#5aafe0','#4090c0','#7080d0','#5868c0',
+  '#8870c0','#7060b0','#c07080','#b06070',
+  '#50a870','#409060','#70c880','#308050','#90d0a0','#207040'
 ];
 
 const PAIRS = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
@@ -287,11 +300,11 @@ function makePair(i,j,rev=false){
 // ─── CIRCUIT TREE ──────────────────────────────────────────────────────────
 const CIRCUIT = {
   id:'root',name:'Grover N=4',
-  sub:'N-Reinas · 8 iteraciones · 14 qubits · profundidad: 41,221',
+  sub:'N-Reinas · 8 iteraciones · 14 qubits · profundidad: 41.221',
   type:'root',color:'var(--root)',
   qubits:[0,1,2,3,4,5,6,7,8,9,10,11,12,13],
   desc:'Circuito completo del algoritmo de Grover para N=4 reinas. Codificación: reina i en fila i (implícita), columna en k=2 bits. Espacio: 2⁸=256. 2 soluciones. 8 iteraciones óptimas.',
-  stats:['qubits estado: 8','flags pares: 6','espacio: 256','soluciones: 2','iter. óptimas: 8','P(éxito): 99.3%','profundidad lógica: 18','profundidad transpilada: 41,221'],
+  stats:['qubits estado: 8','flags pares: 6','espacio: 256','soluciones: 2','iter. óptimas: 8','P(éxito): 99.3%','profundidad lógica: 18','profundidad transpilada: 41.221'],
   isLeaf:false,
   children:[
     {
@@ -416,6 +429,39 @@ const CIRCUIT = {
   ]
 };
 
+// ─── PAGE EXPLANATIONS ────────────────────────────────────────────────────
+const PAGE_EXPLANATIONS = {
+  root: `Esta aplicación permite explorar visualmente el circuito cuántico del <em>algoritmo de Grover</em> aplicado al problema de N-Reinas con N=4. El circuito tiene 3 etapas: <em>inicialización</em> en superposición uniforme, <em>iteraciones de Grover</em> (oráculo + difusor, repetidas 8 veces), y <em>medición</em> final. Hacé click en cualquier bloque para ver su composición interna.`,
+
+  init: `La <em>inicialización</em> crea una superposición uniforme de los 2⁸=256 estados posibles aplicando una compuerta Hadamard a cada qubit. Esto representa simultáneamente todas las combinaciones de columnas para las 4 reinas. Cada estado tiene amplitud 1/16, es decir, la misma probabilidad de ser medido (~0.39%).`,
+
+  grover: `El <em>corazón del algoritmo</em>: se repiten 8 veces dos operaciones — el oráculo (que marca las soluciones con fase −1) y el difusor (que amplifica la probabilidad de los estados marcados). Aquí se muestra la estructura interna de <em>una iteración</em>; las 8 son idénticas. Tras las 8 iteraciones, la probabilidad de medir una solución válida pasa de ~0.8% a ~99.3%.`,
+
+  oracle: `El <em>oráculo</em> es la pieza central del circuito. Su trabajo: detectar si un estado |x⟩ representa una solución válida y, de ser así, multiplicar su amplitud por −1. Internamente tiene 3 etapas: <em>Compute</em> (activa flags de conflicto), <em>Phase Flip</em> (aplica −1 si no hay conflictos) y <em>Uncompute</em> (restaura las ancillas). La estructura compute−phase−uncompute garantiza que solo la fase cambie, sin alterar los qubits auxiliares.`,
+
+  compute: `Para cada par de reinas (i,j) con i&lt;j, se verifica si comparten columna o diagonal. Se evalúan <em>C(4,2)=6 pares</em> en total. La verificación se hace por <em>enumeración explícita de patrones</em>: para cada par de columnas (cᵢ,cⱼ) que representaría un conflicto, se usa match_pattern + MCX para activar el flag correspondiente. Si una configuración no tiene conflictos, todos los flags quedan en |0⟩.`,
+
+  phase: `El <em>Phase Flip</em> aplica fase −1 al estado si y solo si <em>todos</em> los flags son 0 (ningún conflicto = solución válida). Se implementa con el truco X⊗6 → H·MCX·H → X⊗6: primero se invierten los flags (0→1), luego MCX+H implementan MCZ (fase controlada), y finalmente se restauran los flags.`,
+
+  uncompute: `El <em>Uncompute</em> deshace el Compute aplicando las mismas operaciones en <em>orden estrictamente inverso</em>. Esto restaura todos los qubits flag a |0⟩. Es esencial: si las ancillas quedan entrelazadas con los qubits de estado, la interferencia constructiva del difusor no funciona y el algoritmo falla.`,
+
+  diffuser: `El <em>difusor</em> (o inversión sobre la media) implementa el operador D = 2|ψ₀⟩⟨ψ₀| − I. Su efecto: refleja las amplitudes respecto a su promedio. Los estados marcados por el oráculo (con amplitud negativa) quedan con amplitud positiva grande; el resto se atenúa. El circuito es H⊗8 · X⊗8 · MCZ · X⊗8 · H⊗8.`,
+
+  measure: `La <em>medición</em> colapsa el estado cuántico. Cada qubit se mide en la base {|0⟩, |1⟩} y el bitstring resultante se decodifica para obtener las columnas de las 4 reinas. Después de 8 iteraciones de Grover, las dos soluciones válidas ([1,3,0,2] y [2,0,3,1]) concentran ~99.3% de la probabilidad total.`,
+};
+
+// Explanation for pair nodes (generated dynamically)
+function getPairExplanation(nodeId) {
+  const m = nodeId.match(/pair_(\d+)_(\d+)(r?)/);
+  if (!m) return null;
+  const [,i,j,rev] = m;
+  const d = j - i;
+  if (rev) {
+    return `Esta es la etapa de <em>Uncompute</em> del par (${i},${j}). Se aplican las mismas operaciones que en el Compute pero en <em>orden inverso</em>, restaurando el flag pf a |0⟩. Esto es necesario para que las ancillas no queden entrelazadas con los qubits de estado.`;
+  }
+  return `Aquí se verifican los conflictos entre la <em>reina ${i}</em> (fila ${i}) y la <em>reina ${j}</em> (fila ${j}). La distancia de filas es d=${d}. Para cada par de columnas (cᵢ,cⱼ) que representaría un conflicto (misma columna: cᵢ=cⱼ, o diagonal: |cᵢ−cⱼ|=${d}), se usa <em>match_pattern</em> para preparar los qubits y un <em>MCX</em> para voltear el flag si coincide.`;
+}
+
 // ─── ICONS ────────────────────────────────────────────────────────────────
 const ICONS={
   H:'H',X:'X',MCX:'↑X',phase:'−φ',measure:'M',oracle:'⊙',
@@ -437,11 +483,10 @@ let selectedLeaf = null;
 function currentNode(){ return navStack[navStack.length-1]; }
 
 function colorOf(node){
-  return node.color || COLORS[node.type] || '#94a3b8';
+  return node.color || COLORS[node.type] || '#6e85a6';
 }
 
 function hexAlpha(cssVar, a){
-  // Just return with opacity via rgba wrapping
   return `color-mix(in srgb, ${cssVar} 100%, transparent ${Math.round((1-a)*100)}%)`;
 }
 
@@ -458,7 +503,6 @@ function renderWires(node){
 
   QNAMES.forEach((name, qi) => {
     if(!activeQubits.has(qi) && node.id !== 'root') {
-      // Only show active qubits
       if([...activeQubits].length < 14) return; 
     }
     const row = document.createElement('div');
@@ -473,11 +517,10 @@ function renderWires(node){
     const track = document.createElement('div');
     track.className = 'wtrack' + (activeQubits.has(qi) ? ' active' : '');
     
-    // Place gate blocks on the wire
     const gatesDiv = document.createElement('div');
     gatesDiv.className = 'wgates';
     
-    const total = children.length + 2; // +2 for margins
+    const total = children.length + 2;
     children.forEach((child, ci) => {
       if(!child.qubits || !child.qubits.includes(qi)) return;
       const pct = (ci + 1) / total * 100;
@@ -485,10 +528,10 @@ function renderWires(node){
       const gate = document.createElement('div');
       gate.className = 'wgate';
       gate.style.left = `${pct}%`;
-      gate.style.width = `${w}%`;
+      gate.style.width = `${Math.max(w, 6)}%`;
       gate.style.background = colorOf(child);
-      gate.textContent = child.name.length > 8 ? child.name.slice(0,8) : child.name;
-      gate.title = child.name;
+      gate.textContent = child.name;
+      gate.title = child.name + (child.sub ? ' — ' + child.sub : '');
       gate.style.cursor = child.isLeaf ? 'default' : 'pointer';
       gate.onclick = () => { if(!child.isLeaf) drillInto(child); };
       gatesDiv.appendChild(gate);
@@ -531,6 +574,34 @@ function renderInfoPanel(node){
       <div class="iname">${node.name} <span style="color:var(--dim);font-weight:400;font-size:.8rem">— ${node.sub||node.type}</span></div>
       <div class="idesc">${node.desc||''}</div>
       <div class="istats">${statsArr.map(s=>`<span class="istat">${s}</span>`).join('')}</div>
+    </div>
+  </div>`;
+}
+
+function renderExplanation(node) {
+  // Check for page explanation
+  let text = PAGE_EXPLANATIONS[node.id];
+  if (!text) text = getPairExplanation(node.id);
+  if (!text) return '';
+
+  return `
+  <div class="expl-box anim">
+    <div class="expl-title">📘 ¿Qué se hace en esta etapa?</div>
+    ${text}
+  </div>`;
+}
+
+function renderBibliography() {
+  return `
+  <div class="biblio-box anim">
+    <div class="biblio-title">📚 Diferencia con otras implementaciones</div>
+    Esta implementación usa <em style="color:var(--gold);font-style:normal;font-weight:500">codificación por columna</em>: cada reina i se fija implícitamente en la fila i y su columna se codifica en k=⌈log₂N⌉ qubits binarios. Esto requiere solo <strong>N·⌈log₂N⌉ qubits de estado</strong> (8 para N=4).
+    <br><br>
+    En contraste, las implementaciones de <em style="color:var(--gold);font-style:normal;font-weight:500">Jha et al. (2018)</em> y <em style="color:var(--gold);font-style:normal;font-weight:500">Santhosh et al. (2023)</em> usan un <strong>mapeo espacial</strong> con N² qubits (1 por casillero), necesitando 16 qubits para N=4 vs. nuestros 8. Sin embargo, su oráculo tiene menor profundidad ya que las restricciones se verifican localmente.
+    <br><br>
+    <em style="color:var(--gold);font-style:normal;font-weight:500">Torggler et al. (2019)</em> proponen un enfoque completamente distinto: un simulador cuántico de propósito especial con átomos en redes ópticas, sin usar compuertas discretas.
+    <div class="ref">
+      Refs: Jha et al., arXiv:1806.10221 (2018) · Santhosh et al., arXiv:2312.16312 (2023) · Torggler et al., Quantum 3, 149 (2019)
     </div>
   </div>`;
 }
@@ -597,7 +668,6 @@ function drillInto(node){
   render();
 }
 
-// Called from onclick string
 window.drillInto_id = function(id){
   const node = findNode(id, currentNode());
   if(node) drillInto(node);
@@ -625,6 +695,8 @@ function renderApp(){
     html += `<div class="back-btn" onclick="goBack()">← Volver a ${navStack[navStack.length-2].name}</div>`;
   }
   html += renderInfoPanel(node);
+  html += renderExplanation(node);
+  if(node.id === 'root') html += renderBibliography();
   html += renderChildren(node);
   if(selectedLeaf) html += renderLeafPanel(selectedLeaf);
   app.innerHTML = html;
