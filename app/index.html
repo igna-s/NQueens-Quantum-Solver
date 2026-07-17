@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Grover N=4 — Explorador de Circuito Cuántico | UNLP</title>
 <meta name="description" content="Explorador visual interactivo del algoritmo de Grover para el problema de N-Reinas (N=4). Codificación por columna, oráculo basado en enumeración de patrones. UNLP - Introducción a Arq. Comp. Cuánticas.">
+<link rel="icon" type="image/png" href="favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -482,6 +483,16 @@ function getPairExplanation(nodeId) {
   return `Aquí se verifican los conflictos entre la <em>reina ${i}</em> (fila ${i}) y la <em>reina ${j}</em> (fila ${j}). La distancia de filas es d=${d}. Para cada par de columnas (cᵢ,cⱼ) que representaría un conflicto (misma columna: cᵢ=cⱼ, o diagonal: |cᵢ−cⱼ|=${d}), se usa <em>match_pattern</em> para preparar los qubits y un <em>MCX</em> para voltear el flag si coincide.`;
 }
 
+// Explanation for conflict nodes (generated dynamically)
+function getConflictExplanation(nodeId) {
+  const m = nodeId.match(/^c(\d)(\d)_(\d)_(\d)$/);
+  if (!m) return null;
+  const [,i,j,ci,cj] = m;
+  const d = j - i;
+  const reason = ci === cj ? 'misma columna' : `diagonal (|${ci}−${cj}|=${d})`;
+  return `Este bloque verifica un <em>conflicto específico</em>: reina ${i} en columna ${ci} y reina ${j} en columna ${cj} — conflicto por <em>${reason}</em>. El proceso tiene 5 pasos: primero se aplica <em>match_pattern</em> a cada reina (puertas X que preparan los qubits para detectar el valor específico), luego un <em>MCX de 4 controles</em> voltea el flag si ambas reinas coinciden con el patrón, y finalmente se <em>deshace el match_pattern</em> para restaurar los qubits al estado original sin alterar el flag.`;
+}
+
 // ─── ICONS ────────────────────────────────────────────────────────────────
 const ICONS={
   H:'H',X:'X',MCX:'↑X',phase:'−φ',measure:'M',oracle:'⊙',
@@ -602,6 +613,11 @@ function renderExplanation(node) {
   // Check for page explanation
   let text = PAGE_EXPLANATIONS[node.id];
   if (!text) text = getPairExplanation(node.id);
+  if (!text) text = getConflictExplanation(node.id);
+  // Fallback: any non-leaf node uses its desc
+  if (!text && !node.isLeaf && node.children && node.children.length > 0 && node.desc) {
+    text = node.desc;
+  }
   if (!text) return '';
 
   return `
