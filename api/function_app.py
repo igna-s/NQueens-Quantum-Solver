@@ -92,3 +92,13 @@ resultados de nuestros algoritmos cuánticos! 🚀🧠
         return func.HttpResponse(final_output, status_code=200, mimetype="text/plain")
     except Exception as e:
         return func.HttpResponse(f"Exception: {str(e)}", status_code=500)
+
+@app.route(route="run_grover_v2")
+def run_grover_v2(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('Executing Grover N=4 (V2 Architecture)')
+    try:
+        output = run_script("nqueens_grover_v2.py")
+        return func.HttpResponse(output, status_code=200, mimetype="text/plain")
+    except Exception as e:
+        return func.HttpResponse(f"Exception: {str(e)}", status_code=500)
+
