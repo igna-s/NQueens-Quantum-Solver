@@ -845,6 +845,7 @@ async function runBackend(endpoint) {
   const modalBody = document.getElementById('modal-body');
   const modalTitle = document.getElementById('modal-title');
   const btnGrover = document.getElementById('btn-grover');
+  const btnGroverV2 = document.getElementById('btn-grover-v2');
   const btnQaoa = document.getElementById('btn-qaoa');
   const btnC = document.getElementById('btn-c');
   
@@ -852,11 +853,13 @@ async function runBackend(endpoint) {
   modalBody.textContent = `[⏳] Ejecutando código en Azure Functions...\n(Esto tomará unos segundos)\n\nNota: Si esto es una demo y no estás corriendo el backend, fallará.`;
   
   if(endpoint === 'run_grover') modalTitle.textContent = 'Resultado: N-Queens Grover (N=4)';
+  else if(endpoint === 'run_grover_v2') modalTitle.textContent = 'Resultado: N-Queens Grover V2 (N=4)';
   else if(endpoint === 'run_qaoa') modalTitle.textContent = 'Resultado: N-Queens QAOA (N=4)';
   else modalTitle.textContent = 'Resultado: N-Queens Clásico C (N=4)';
   
-  btnGrover.disabled = true;
-  btnQaoa.disabled = true;
+  if(btnGrover) btnGrover.disabled = true;
+  if(btnGroverV2) btnGroverV2.disabled = true;
+  if(btnQaoa) btnQaoa.disabled = true;
   if(btnC) btnC.disabled = true;
 
   try {
@@ -870,8 +873,9 @@ async function runBackend(endpoint) {
   } catch (error) {
     modalBody.textContent = `[❌] Falló la ejecución.\nMotivo: ${error.message}\n\nAsegúrate de que la aplicación esté corriendo a través de Azure Static Web Apps (que levanta la API automáticamente) o usando la SWA CLI localmente.`;
   } finally {
-    btnGrover.disabled = false;
-    btnQaoa.disabled = false;
+    if(btnGrover) btnGrover.disabled = false;
+    if(btnGroverV2) btnGroverV2.disabled = false;
+    if(btnQaoa) btnQaoa.disabled = false;
     if(btnC) btnC.disabled = false;
   }
 }
