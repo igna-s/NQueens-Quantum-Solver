@@ -1,193 +1,206 @@
-"""
-N-reinas cuántico vía algoritmo de Grover - VERSIÓN 2 (Arquitectura Optimizada)
-
-Esta versión implementa las mejoras arquitectónicas del "Santo Grial" para escalar (ej. N=50):
-1. Reemplaza los flags combinatorios O(N^2) por un único Acumulador Binario (Ahorro masivo de memoria).
-2. Reemplaza el match_pattern O(N^4) por Restadores Cuánticos (Ahorro masivo de profundidad).
-"""
-
 import sys, io
 if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 import numpy as np
-from itertools import combinations
-from math import pi, ceil, log2, sqrt
+from itertools import combinations, permutations
+from math import pi, ceil, log2, asin, sqrt
 
-from qiskit import QuantumCircuit, QuantumRegister, transpile
-from qiskit.circuit import Gate
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
+from qiskit_aer import AerSimulator
 
-# ---------------------------------------------------------------------------
-# Cajas Negras Aritméticas (Abstracciones de Hardware)
-# ---------------------------------------------------------------------------
+def classical_solutions(N):
+    sols = []
+    for perm in permutations(range(N)):
+        ok = True
+        for i, j in combinations(range(N), 2):
+            if abs(perm[i] - perm[j]) == j - i:
+                ok = False
+                break
+        if ok:
+            sols.append(list(perm))
+    return sols
 
-class QuantumSubtractorConflict(Gate):
-    """
-    Abstracción de un Restador Cuántico.
-    Matemáticamente calcula |col_i - col_j| y evalúa si chocan en columna (==0)
-    o en diagonal (== d_rows).
-    Costo en hardware real: ~O(k) compuertas base. Usamos dummy gates para aproximarlo.
-    """
-    def __init__(self, k):
-        # Entradas: k qubits (reina i) + k qubits (reina j) + 1 qubit (flag temporal)
-        super().__init__("Subtractor_Conflict", 2 * k + 1, [])
-        self.k = k
+def decode(bitstring, N, k):
+    bits = bitstring[::-1]
+    queens = []
+    for i in range(N):
+        col = 0
+        for b in range(k):
+            if bits[i * k + b] == "1":
+                col |= 1 << b
+        queens.append(col)
+    return queens
 
-    def _define(self):
-        qc = QuantumCircuit(2 * self.k + 1)
-        # Dummy gates para simular la profundidad asintótica (O(k))
-        # Esto le dirá al simulador que la caja negra tiene una profundidad proporcional a k
-        for _ in range(self.k * 3):
-            qc.cx(0, 1) 
-        self.definition = qc
+def is_valid(queens, N):
+    if any(c < 0 or c >= N for c in queens):
+        return False
+    for i, j in combinations(range(N), 2):
+        if queens[i] == queens[j] or abs(queens[i] - queens[j]) == j - i:
+            return False
+    return True
 
-class QuantumAdder(Gate):
-    """
-    Abstracción de un Sumador Cuántico (+1).
-    Suma el valor del flag temporal (0 o 1) al Registro Acumulador Binario.
-    Costo en hardware real: ~O(k_acc) compuertas base.
-    """
-    def __init__(self, k_acc):
-        # Entradas: 1 qubit (flag temporal) + k_acc qubits (registro acumulador)
-        super().__init__("Adder_Accumulator", 1 + k_acc, [])
-        self.k_acc = k_acc
+def print_board(queens, N):
+    for i in range(N):
+        line = "    "
+        for c in range(N):
+            line += "Q " if queens[i] == c else ". "
+        print(line)
 
-    def _define(self):
-        qc = QuantumCircuit(1 + self.k_acc)
-        # Dummy gates para simular la profundidad de la suma (O(k_acc))
-        for _ in range(self.k_acc * 2):
-            qc.cx(0, 1)
-        self.definition = qc
+def add_conflict_detection(qc, q_i, q_j, d, scratch):
+    for A in range(4):
+        for B in range(4):
+            if A == B or abs(A - B) == d:
+                x_flips = []
+                if (A & 1) == 0: x_flips.append(q_i[0])
+                if (A & 2) == 0: x_flips.append(q_i[1])
+                if (B & 1) == 0: x_flips.append(q_j[0])
+                if (B & 2) == 0: x_flips.append(q_j[1])
+                
+                if x_flips: qc.x(x_flips)
+                qc.mcx(q_i + q_j, scratch)
+                if x_flips: qc.x(x_flips)
 
-# ---------------------------------------------------------------------------
-# Construcción del Oráculo V2
-# ---------------------------------------------------------------------------
+def add_1_controlled(qc, flag, acc):
+    qc.mcx([flag, acc[0], acc[1]], acc[2])
+    qc.ccx(flag, acc[0], acc[1])
+    qc.cx(flag, acc[0])
+
+def uncompute_add_1_controlled(qc, flag, acc):
+    qc.cx(flag, acc[0])
+    qc.ccx(flag, acc[0], acc[1])
+    qc.mcx([flag, acc[0], acc[1]], acc[2])
 
 def build_arithmetic_oracle(N):
-    """
-    Oráculo V2: Utiliza aritmética y un registro contador global (Accumulator).
-    """
-    k = max(1, ceil(log2(N)))
+    k = 2
     n_state = N * k
+    k_acc = 3
     
-    # 1. Registro Contador Binario (Acumulador)
-    # Debe poder contar hasta C(N,2) posibles colisiones en el peor caso.
-    max_collisions = N * (N - 1) // 2
-    k_acc = max(1, ceil(log2(max_collisions + 1)))
-    
-    # 2. Registros Cuánticos
     state_reg = QuantumRegister(n_state, "q")
-    accumulator_reg = QuantumRegister(k_acc, "acc")
-    scratchpad_flag = QuantumRegister(1, "scratch") # Memoria reciclable temporal
+    acc_reg = QuantumRegister(k_acc, "acc")
+    scratch = QuantumRegister(1, "scratch")
     
-    regs = [state_reg, accumulator_reg, scratchpad_flag]
+    qc = QuantumCircuit(state_reg, acc_reg, scratch, name="Arithmetic_Oracle")
     
-    needs_range = (2**k) > N
-    range_flags = None
-    if needs_range:
-        range_flags = QuantumRegister(N, "rf")
-        regs.append(range_flags)
-
-    qc = QuantumCircuit(*regs, name="Arithmetic_Oracle")
-
-    # Instanciar puertas lógicas abstractas
-    subtractor_gate = QuantumSubtractorConflict(k)
-    adder_gate = QuantumAdder(k_acc)
-    subtractor_dg = subtractor_gate.inverse()
-    adder_dg = adder_gate.inverse()
-    
-    # --- ETAPA 1: COMPUTE CONFLICTS ---
     for i, j in combinations(range(N), 2):
-        q_i = [state_reg[i * k + b] for b in range(k)]
-        q_j = [state_reg[j * k + b] for b in range(k)]
+        d = j - i
+        q_i = [state_reg[i*k + b] for b in range(k)]
+        q_j = [state_reg[j*k + b] for b in range(k)]
+        add_conflict_detection(qc, q_i, q_j, d, scratch[0])
+        add_1_controlled(qc, scratch[0], acc_reg)
+        add_conflict_detection(qc, q_i, q_j, d, scratch[0])
         
-        # a) Restador: Detectar conflicto aritméticamente -> resultado va a scratchpad
-        qc.append(subtractor_gate, q_i + q_j + [scratchpad_flag[0]])
-        
-        # b) Acumulador: Si hay conflicto, sumar +1 al contador global
-        qc.append(adder_gate, [scratchpad_flag[0]] + list(accumulator_reg))
-        
-        # c) Uncompute Restador: Limpiar scratchpad para el próximo par (Reutilización de memoria)
-        qc.append(subtractor_dg, q_i + q_j + [scratchpad_flag[0]])
-
-    # Detección de rango usando una abstracción simplificada de costo constante para V2
-    if needs_range:
-        for i in range(N):
-            qc.x(range_flags[i]) # Placeholder lógico 
-
-    # --- ETAPA 2: PHASE FLIP (-1) ---
-    # Si TODOS los contadores están en 0, es una solución válida.
-    all_acc_range = list(accumulator_reg) + (list(range_flags) if needs_range else [])
+    qc.x(acc_reg)
+    qc.h(acc_reg[-1])
+    qc.mcx(list(acc_reg[:-1]), acc_reg[-1])
+    qc.h(acc_reg[-1])
+    qc.x(acc_reg)
     
-    qc.x(all_acc_range) # 0 se vuelve 1 para que el MCZ dispare
-    
-    # Aplicar MCZ = H · MCX · H
-    if len(all_acc_range) > 1:
-        qc.h(all_acc_range[-1])
-        qc.mcx(all_acc_range[:-1], all_acc_range[-1])
-        qc.h(all_acc_range[-1])
-    elif len(all_acc_range) == 1:
-        qc.z(all_acc_range[0])
-        
-    qc.x(all_acc_range) # Restaurar los 1s a 0s
-
-    # --- ETAPA 3: UNCOMPUTE CONFLICTS ---
-    if needs_range:
-        for i in reversed(range(N)):
-            qc.x(range_flags[i])
-            
     for i, j in reversed(list(combinations(range(N), 2))):
-        q_i = [state_reg[i * k + b] for b in range(k)]
-        q_j = [state_reg[j * k + b] for b in range(k)]
+        d = j - i
+        q_i = [state_reg[i*k + b] for b in range(k)]
+        q_j = [state_reg[j*k + b] for b in range(k)]
+        add_conflict_detection(qc, q_i, q_j, d, scratch[0])
+        uncompute_add_1_controlled(qc, scratch[0], acc_reg)
+        add_conflict_detection(qc, q_i, q_j, d, scratch[0])
         
-        qc.append(subtractor_gate, q_i + q_j + [scratchpad_flag[0]])
-        qc.append(adder_dg, [scratchpad_flag[0]] + list(accumulator_reg))
-        qc.append(subtractor_dg, q_i + q_j + [scratchpad_flag[0]])
+    return qc, state_reg, acc_reg, scratch
 
-    return qc, state_reg, accumulator_reg, range_flags
+def diffuser(n_state):
+    qc = QuantumCircuit(n_state, name="Diff")
+    qc.h(range(n_state))
+    qc.x(range(n_state))
+    qc.h(n_state - 1)
+    qc.mcx(list(range(n_state - 1)), n_state - 1)
+    qc.h(n_state - 1)
+    qc.x(range(n_state))
+    qc.h(range(n_state))
+    return qc
 
-# ---------------------------------------------------------------------------
-# Análisis y Métricas
-# ---------------------------------------------------------------------------
-
-def analyze_v2(N):
-    oracle, state_reg, accumulator_reg, range_flags = build_arithmetic_oracle(N)
+def run_grover_v2(N=4, shots=4096):
+    k = 2
+    n_state = N * k
+    total_states = 2 ** n_state
+    n_sols = len(classical_solutions(N))
     
-    # Transpile básico para desarmar los bloques abstractos en gates elementales
-    qc_t = transpile(oracle, basis_gates=["u", "cx", "h", "x", "ccx"], optimization_level=1)
+    theta = 2 * asin(sqrt(n_sols / total_states))
+    iters = max(1, int(round(pi / (2 * theta) - 0.5)))
     
-    k = max(1, ceil(log2(N)))
+    oracle, state_reg, acc_reg, scratch = build_arithmetic_oracle(N)
+    creg = ClassicalRegister(n_state, "c")
+    qc = QuantumCircuit(state_reg, acc_reg, scratch, creg)
+    
+    qc.h(state_reg)
+    diff = diffuser(n_state)
+    for _ in range(iters):
+        qc.compose(oracle, inplace=True)
+        qc.compose(diff, qubits=state_reg, inplace=True)
+    qc.measure(state_reg, creg)
+    
+    sim = AerSimulator(method="statevector")
+    qc_t = transpile(qc, basis_gates=["u", "cx", "h", "x", "ccx"], optimization_level=1)
+    
     info = {
         "N": N,
         "k": k,
-        "n_state_qubits": len(state_reg),
-        "n_accumulator_qubits": len(accumulator_reg),
-        "n_range_flags": (len(range_flags) if range_flags is not None else 0),
-        "n_scratchpad_qubits": 1,
-        "total_qubits": oracle.num_qubits,
-        "oracle_depth": qc_t.depth()
+        "n_state_qubits": n_state,
+        "n_acc_qubits": len(acc_reg),
+        "n_scratch_qubits": len(scratch),
+        "total_states": total_states,
+        "n_solutions": n_sols,
+        "iterations": iters,
+        "circuit_depth": qc_t.depth(),
+        "total_qubits": qc.num_qubits,
     }
-    return info
+    
+    result = sim.run(qc_t, shots=shots).result()
+    counts = result.get_counts()
+    return counts, info, k
 
-def print_v2_metrics(N, info):
+def pretty_report_v2(N, counts, info, k, top=15):
     print(f"\n{'='*60}")
     print(f"  N = {N} (Arquitectura V2 - Aritmética Cuántica)")
     print(f"{'='*60}")
-    print(f"  Qubits estado        : {info['n_state_qubits']}  ({info['k']} bits/columna)")
-    print(f"  Qubits contador      : {info['n_accumulator_qubits']} (Acumulador binario de colisiones)")
-    print(f"  Qubits scratchpad    : {info['n_scratchpad_qubits']} (Reciclables)")
-    print(f"  Flags rango          : {info['n_range_flags']}")
-    print(f"  TOTAL QUBITS         : {info['total_qubits']}")
-    print(f"  PROFUNDIDAD ORÁCULO  : {info['oracle_depth']} gates (Estimación con bloques O(k))")
-    print(f"{'='*60}")
+    print(f"  qubits estado  : {info['n_state_qubits']}  ({info['k']} bits/columna)")
+    print(f"  qubits contador: {info['n_acc_qubits']} (Acumulador)")
+    print(f"  qubits scratch : {info['n_scratch_qubits']}")
+    print(f"  qubits totales : {info['total_qubits']}")
+    print(f"  espacio        : {info['total_states']}")
+    print(f"  soluciones     : {info['n_solutions']}")
+    print(f"  iteraciones    : {info['iterations']}")
+    print(f"  profundidad    : {info['circuit_depth']}")
+
+    sorted_counts = sorted(counts.items(), key=lambda x: -x[1])
+    total = sum(counts.values())
+    valid_count = 0
+    unique_sols = set()
+
+    print(f"\n  Top {top} mediciones:")
+    for bs, c in sorted_counts[:top]:
+        queens = decode(bs, N, k)
+        ok = is_valid(queens, N)
+        mark = "OK " if ok else "X  "
+        print(f"    {mark} cols={queens}  count={c}  p={c/total:.3f}")
+
+    for bs, c in counts.items():
+        q = decode(bs, N, k)
+        if is_valid(q, N):
+            valid_count += c
+            unique_sols.add(tuple(q))
+
+    print(f"\n  P(medir solución válida) = {valid_count/total:.1%}")
+    print(f"  Soluciones únicas medidas: {len(unique_sols)} / {info['n_solutions']}")
+
+    print("\n  Tableros (de mayor a menor frecuencia):")
+    sol_freq = {}
+    for bs, c in counts.items():
+        q = tuple(decode(bs, N, k))
+        if is_valid(list(q), N):
+            sol_freq[q] = sol_freq.get(q, 0) + c
+    for sol, c in sorted(sol_freq.items(), key=lambda x: -x[1]):
+        print(f"\n    cols={list(sol)}  count={c}")
+        print_board(list(sol), N)
 
 if __name__ == "__main__":
-    print("Iniciando análisis de arquitectura V2 (Restador + Acumulador)...")
-    
-    info_4 = analyze_v2(4)
-    print_v2_metrics(4, info_4)
-    
-    print("\n[NOTA DE ESCALABILIDAD]")
-    print("Compara este output de V2 con el comportamiento de V1:")
-    print(" - En V1, para N=4 la profundidad por iteración es de ~5.100 compuertas.")
-    print(" - En V2, para N=4 la profundidad cae drásticamente gracias a la aritmética y el uso del contador.")
+    counts, info, k = run_grover_v2(4, shots=4096)
+    pretty_report_v2(4, counts, info, k)
