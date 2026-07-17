@@ -476,60 +476,45 @@ const CIRCUIT = {
 };
 
 // ─── PAGE EXPLANATIONS ──────────────────────────────────────────────────────────────
+// ─── PAGE EXPLANATIONS ──────────────────────────────────────────────────────────────
 const PAGE_EXPLANATIONS = {
   root: `<strong>El problema de N-Reinas</strong> consiste en ubicar N reinas en un tablero N×N sin que se amenacen entre sí (misma fila, columna o diagonal). Para N=4 existen exactamente <em>2 soluciones</em>: [1,3,0,2] y [2,0,3,1].<br><br>
 <strong>El algoritmo de Grover</strong> es un algoritmo cuántico de búsqueda no estructurada que ofrece una aceleración cuadrática: en vez de revisar O(N) estados clásicamente, examina O(√N) usando interferencia cuántica.<br><br>
-<strong>Codificación usada:</strong> cada reina i se fija implícitamente en la fila i. Su columna se codifica en k=⌈log₂N⌉=2 qubits binarios (función <code>queen_qubits(state_reg, i, k)</code> en el código). Así se necesitan solo <em>8 qubits de estado</em> (q₀…q₇) más <em>6 qubits flag</em> (pf₀…pf₅, uno por cada par C(4,2)=6) para detectar conflictos. Total: 14 qubits.<br><br>
+<strong>Codificación usada:</strong> cada reina se ubica implícitamente en una fila distinta. Su posición dentro de la fila (la columna) se codifica en 2 qubits binarios. Así se necesitan solo <em>8 qubits de estado</em> para representar el tablero, más <em>6 qubits flag auxiliares</em> (uno por cada par de reinas) para detectar conflictos. Total: 14 qubits.<br><br>
 El circuito tiene 3 etapas: <em>inicialización</em> (superposición uniforme de 256 estados), <em>8 iteraciones de Grover</em> (oráculo + difusor), y <em>medición</em> final. Hacé click en cualquier bloque para explorar su estructura interna.`,
 
-  init: `La <em>inicialización</em> aplica una compuerta Hadamard (H) a cada uno de los 8 qubits de estado (q₀…q₇), creando una <em>superposición uniforme</em> de los 2⁸=256 estados posibles. En código: <code>qc.h(state_reg)</code>.<br><br>
-Esto significa que el circuito "considera" simultáneamente todas las 256 combinaciones de columnas para las 4 reinas. Cada estado tiene amplitud 1/√256 = 1/16, es decir, ~0.39% de probabilidad de ser medido. Los 6 qubits flag (pf₀…pf₅) se mantienen en |0⟩. Después de este paso, el sistema está listo para que Grover empiece a amplificar las soluciones.`,
+  init: `La <em>inicialización</em> aplica una compuerta de Hadamard a cada uno de los 8 qubits principales, creando una <em>superposición uniforme</em> de los 2⁸=256 estados posibles.<br><br>
+Esto significa que el circuito cuántico evalúa simultáneamente todas las 256 combinaciones de columnas para las 4 reinas. Inicialmente, cada estado tiene la misma probabilidad de ser medido (~0.39%). Los 6 qubits flag comienzan en el estado base |0⟩. Después de este paso, el sistema está listo para que el algoritmo empiece a buscar y amplificar las soluciones correctas.`,
 
-  grover: `Este es el <em>corazón del algoritmo de Grover</em>. Se repiten 8 veces dos operaciones: el <em>Oráculo</em> (que marca las soluciones invirtiendo su fase) y el <em>Difusor</em> (que amplifica la probabilidad de los estados marcados).<br><br>
-<strong>¿Por qué 8 iteraciones?</strong> El número óptimo se calcula como R ≈ π/4 · √(N_total/M) donde N_total=256 (espacio de búsqueda) y M=2 (soluciones). Esto da R ≈ π/4 · √128 ≈ 8. Cada iteración rota el estado θ ≈ 0.177 radianes hacia las soluciones. <em>Si te pasás, la probabilidad baja</em> — Grover tiene un "punto dulce".<br><br>
-Aquí se muestra la estructura interna de <em>una iteración</em>; las 8 son idénticas. La probabilidad de éxito pasa de ~0.8% a ~99.3%.`,
+  grover: `Este es el <em>corazón del algoritmo de Grover</em>. Se repiten 8 veces dos operaciones: el <em>Oráculo</em> (que marca las soluciones invirtiendo su fase cuántica) y el <em>Difusor</em> (que amplifica la probabilidad de los estados marcados).<br><br>
+<strong>¿Por qué 8 iteraciones?</strong> El número óptimo depende de la proporción entre la cantidad de estados totales y las soluciones válidas. Cada iteración rota gradualmente el sistema hacia las respuestas correctas. <em>Si se realizan más iteraciones de las necesarias, la probabilidad de éxito disminuye</em> — Grover tiene un punto de corte exacto.<br><br>
+Aquí se muestra la estructura interna de <em>una iteración</em>; las 8 son idénticas. En conjunto, elevan la probabilidad de encontrar una solución de ~0.8% a ~99.3%.`,
 
-  oracle: `El <em>oráculo</em> (función <code>build_oracle(N)</code>) es la pieza central del circuito. Detecta si un estado |x⟩ es una ubicación válida de reinas y, de ser así, multiplica su amplitud por −1.<br><br>
+  oracle: `El <em>oráculo</em> es la pieza central del circuito. Actúa como un juez cuántico: detecta si un estado representa una ubicación válida de las reinas y, de ser así, multiplica su amplitud por −1 para marcarlo.<br><br>
 Internamente tiene 3 etapas en estructura de "sándwich":<br>
-• <em>Compute</em>: para cada par (i,j), ejecuta <code>mark_pair_conflict()</code> que voltea el flag correspondiente si hay conflicto de columna o diagonal.<br>
-• <em>Phase Flip</em>: si TODOS los flags son 0 (sin conflictos), aplica fase −1 usando <code>qc.x(all_flags); qc.h(last); qc.mcx(rest, last); qc.h(last); qc.x(all_flags)</code>.<br>
-• <em>Uncompute</em>: deshace el Compute en orden inverso (<code>reversed()</code>) para restaurar los flags a |0⟩.<br><br>
-Esta estructura garantiza que solo la <em>fase</em> de las soluciones cambie, sin dejar basura en los qubits auxiliares.`,
+• <em>Compute</em>: para cada par de reinas, se verifica si hay conflicto (comparten columna o diagonal) y se activa un flag temporal.<br>
+• <em>Phase Flip</em>: si TODOS los flags indican que no hay conflictos, se aplica el cambio de fase (−1) a esa configuración.<br>
+• <em>Uncompute</em>: deshace la primera etapa para restaurar los flags a su valor original.<br><br>
+Esta estructura garantiza que solo se marque la respuesta correcta, sin dejar "basura cuántica" en los qubits auxiliares.`,
 
-  compute: `El <em>Compute</em> (primera mitad de <code>build_oracle()</code>) verifica conflictos entre cada par de reinas. Con 4 reinas hay C(4,2)=<em>6 pares</em>: (0,1), (0,2), (0,3), (1,2), (1,3), (2,3).<br><br>
-Para cada par, la función <code>mark_pair_conflict(qc, q_i, q_j, k, d_rows, flag, N)</code> enumera todas las combinaciones de columnas (cᵢ,cⱼ) que serían conflicto. Un conflicto ocurre si <code>ci == cj</code> (misma columna) o <code>abs(ci - cj) == d_rows</code> (diagonal). Para cada uno:<br>
-1. <code>apply_match_pattern(qc, q_i, ci, k)</code> — aplica X donde el bit de cᵢ es 0<br>
-2. <code>apply_match_pattern(qc, q_j, cj, k)</code> — lo mismo para la reina j<br>
-3. <code>qc.mcx(q_i + q_j, flag)</code> — voltea el flag si ambos registros son |11⟩<br>
-4. Deshace las X (match_pattern se auto-invierte).<br><br>
-Si una configuración no tiene ningún conflicto, todos los 6 flags quedan en |0⟩.`,
+  compute: `El <em>Compute</em> verifica los conflictos entre cada posible par de reinas. Con 4 reinas existen <em>6 pares</em> que pueden amenazarse: (0,1), (0,2), (0,3), (1,2), (1,3) y (2,3).<br><br>
+Para evaluar cada par, el circuito repasa todas las combinaciones problemáticas (donde las reinas coinciden en columna o en diagonal). Se utilizan secuencias de compuertas cuánticas para detectar estos patrones específicos. Si la configuración actual coincide con un patrón de ataque, se voltea el flag correspondiente a ese par.<br><br>
+Si la configuración del tablero no presenta ninguna amenaza, los 6 flags permanecerán en su estado base |0⟩.`,
 
-  phase: `El <em>Phase Flip</em> aplica fase −1 al estado si y solo si <em>todos</em> los 6 flags son 0 (solución válida). En código:<br><br>
-<code>qc.x(all_flags)</code> — invierte todos los flags (0→1). Si todos eran 0, ahora todos son 1.<br>
-<code>qc.h(all_flags[-1])</code> — H en el último flag para convertir MCX en MCZ.<br>
-<code>qc.mcx(all_flags[:-1], all_flags[-1])</code> — MCX con 5 controles: solo dispara si todos son 1.<br>
-<code>qc.h(all_flags[-1])</code> — segundo H completa el truco H·MCX·H = MCZ.<br>
-<code>qc.x(all_flags)</code> — restaura los flags.<br><br>
-Resultado: solo los estados sin conflictos adquieren factor −1, que el difusor luego amplificará.`,
+  phase: `El <em>Phase Flip</em> (Inversión de Fase) tiene una única misión: aplicar un factor de −1 al estado cuántico si y solo si <em>todos</em> los 6 flags están apagados (es decir, es una solución válida sin ataques).<br><br>
+Para lograr esto, el circuito utiliza una serie de operaciones condicionales que se activan únicamente cuando no se ha detectado ningún conflicto en el paso anterior. Esto invierte la "dirección" (fase) de la onda cuántica exclusiva de los estados correctos.<br><br>
+Como resultado, las soluciones válidas adquieren un signo negativo en su amplitud, preparándolas para que el siguiente bloque las detecte y amplifique.`,
 
-  uncompute: `El <em>Uncompute</em> deshace el Compute aplicando exactamente las mismas operaciones en <em>orden estrictamente inverso</em>. En código:<br><br>
-<code>for idx, (i,j) in reversed(list(enumerate(combinations(range(N), 2)))):</code><br>
-&nbsp;&nbsp;&nbsp;&nbsp;<code>mark_pair_conflict(...)</code><br><br>
-Esto restaura todos los qubits flag a |0⟩. <strong>¿Por qué es esencial?</strong> Si los flags quedaran entrelazados con los qubits de estado, la interferencia constructiva del difusor se arruinaría y el algoritmo fallaría. La computación cuántica es reversible: aplicar la misma operación dos veces es como no hacer nada (las puertas usadas, X y MCX, son sus propias inversas).`,
+  uncompute: `El <em>Uncompute</em> deshace el trabajo de la etapa Compute, aplicando exactamente las mismas operaciones pero en <em>orden estrictamente inverso</em>. Esto restaura todos los qubits auxiliares (flags) a su estado original |0⟩.<br><br>
+<strong>¿Por qué es esencial?</strong> La computación cuántica requiere que los cálculos intermedios se limpien. Si los flags quedaran alterados y entrelazados con el tablero, la interferencia cuántica necesaria para el difusor se destruiría. Al ser las operaciones cuánticas reversibles, volver a aplicarlas en reversa limpia el sistema de forma segura.`,
 
-  diffuser: `El <em>difusor</em> (función <code>diffuser(n_state)</code>) implementa la inversión sobre la media: D = 2|ψ₀⟩⟨ψ₀| − I. En código:<br><br>
-<code>qc.h(range(n_state))</code> — H⊗8: base superposición → base computacional<br>
-<code>qc.x(range(n_state))</code> — X⊗8: invierte todos los bits<br>
-<code>qc.h(n_state - 1)</code> — H en q₇ para MCZ<br>
-<code>qc.mcx(list(range(n_state-1)), n_state-1)</code> — MCX con 7 controles<br>
-<code>qc.h(n_state - 1)</code> — completa MCZ<br>
-<code>qc.x(range(n_state))</code> — restaura bits<br>
-<code>qc.h(range(n_state))</code> — vuelve a base superposición<br><br>
-<strong>Efecto:</strong> los 254 estados inválidos (amplitud +1/16) y los 2 válidos (amplitud −1/16 tras el oráculo) se reflejan respecto a la media (~+0.062). Los negativos quedan amplificados, los positivos atenuados.`,
+  diffuser: `El <em>difusor</em> implementa un proceso físico conocido como "inversión sobre la media". Actúa como una lente que enfoca la probabilidad hacia las soluciones marcadas.<br><br>
+Físicamente, el difusor calcula el promedio general de todas las amplitudes del sistema y refleja cada estado respecto a ese promedio.<br><br>
+<strong>Efecto visual:</strong> Después del oráculo, los estados inválidos son positivos y los válidos son negativos. El promedio es ligeramente positivo. Al reflejar los valores, los estados inválidos se reducen, mientras que los válidos (que estaban negativos) saltan a ser positivos y mucho más grandes. Cada iteración repite este efecto.`,
 
-  measure: `La <em>medición</em> colapsa el estado cuántico. En código: <code>qc.measure(state_reg, creg)</code>. Cada uno de los 8 qubits de estado se mide en la base {|0⟩, |1⟩}.<br><br>
-<strong>Decodificación</strong> (función <code>decode(bitstring, N, k)</code>): para cada reina i, su columna es <code>col = c[2i] + 2·c[2i+1]</code>. Ejemplo: bitstring 01110010 → reina 0→col 1, reina 1→col 3, reina 2→col 0, reina 3→col 2 = [1,3,0,2] ✓<br><br>
-<strong>Validación</strong> (función <code>is_valid(queens, N)</code>): verifica que ningún par comparta columna ni diagonal. Después de 8 iteraciones, las dos soluciones aparecen con <em>~49.6% cada una</em> (total ~99.3%). Grover amplifica por igual a todos los estados marcados.`,
+  measure: `La <em>medición</em> es el paso final que colapsa el estado cuántico en una respuesta clásica y legible. Cada uno de los 8 qubits principales se mide, arrojando una cadena de bits (0s y 1s).<br><br>
+<strong>Decodificación:</strong> Los bits resultantes se agrupan de a pares para revelar en qué columna quedó ubicada cada reina. Por ejemplo, una cadena de bits se traduciría directamente a la posición [1, 3, 0, 2].<br><br>
+<strong>Validación:</strong> Gracias al poder de Grover, después de 8 iteraciones la medición arrojará una de las dos soluciones válidas el ~99.3% de las veces. El algoritmo no favorece una solución sobre la otra, apareciendo ambas con idéntica frecuencia.`,
 };
 
 // Explanation for pair nodes (generated dynamically)
@@ -539,9 +524,9 @@ function getPairExplanation(nodeId) {
   const [,i,j,rev] = m;
   const d = j - i;
   if (rev) {
-    return `Esta es la etapa de <em>Uncompute</em> del par (${i},${j}). Se aplican las mismas operaciones que en el Compute pero en <em>orden inverso</em>, restaurando el flag pf a |0⟩. Esto es necesario para que las ancillas no queden entrelazadas con los qubits de estado.`;
+    return `Esta es la etapa de <em>Uncompute</em> del par de reinas (${i},${j}). Se aplican las mismas operaciones cuánticas que en el Compute pero en <em>orden inverso</em>, limpiando el flag y devolviéndolo a |0⟩. Esto es necesario para deshacer el entrelazamiento cuántico intermedio.`;
   }
-  return `Aquí se verifican los conflictos entre la <em>reina ${i}</em> (fila ${i}) y la <em>reina ${j}</em> (fila ${j}). La distancia de filas es d=${d}. Para cada par de columnas (cᵢ,cⱼ) que representaría un conflicto (misma columna: cᵢ=cⱼ, o diagonal: |cᵢ−cⱼ|=${d}), se usa <em>match_pattern</em> para preparar los qubits y un <em>MCX</em> para voltear el flag si coincide.`;
+  return `Aquí se verifican los conflictos entre la <em>reina ${i}</em> y la <em>reina ${j}</em> (separadas por ${d} fila/s). Para cada combinación de columnas que representaría un ataque (ya sea por compartir columna o diagonal), el circuito verifica si las reinas se encuentran en dichas posiciones. Si se detecta un patrón de ataque, se activa un qubit auxiliar (flag) usando compuertas condicionadas.`;
 }
 
 // Explanation for conflict nodes (generated dynamically)
@@ -551,7 +536,7 @@ function getConflictExplanation(nodeId) {
   const [,i,j,ci,cj] = m;
   const d = j - i;
   const reason = ci === cj ? 'misma columna' : `diagonal (|${ci}−${cj}|=${d})`;
-  return `Este bloque verifica un <em>conflicto específico</em>: reina ${i} en columna ${ci} y reina ${j} en columna ${cj} — conflicto por <em>${reason}</em>. El proceso tiene 5 pasos: primero se aplica <em>match_pattern</em> a cada reina (puertas X que preparan los qubits para detectar el valor específico), luego un <em>MCX de 4 controles</em> voltea el flag si ambas reinas coinciden con el patrón, y finalmente se <em>deshace el match_pattern</em> para restaurar los qubits al estado original sin alterar el flag.`;
+  return `Este bloque verifica un <em>conflicto específico</em>: si la reina ${i} está en la columna ${ci} y la reina ${j} está en la columna ${cj}. Esto representaría un ataque por <em>${reason}</em>.<br><br>El proceso cuántico prepara los qubits para detectar esta combinación exacta de posiciones, verifica si se cumple la condición y, de ser así, marca el flag de conflicto. Finalmente, revierte la preparación inicial para no alterar el estado principal del tablero.`;
 }
 
 // ─── ICONS ────────────────────────────────────────────────────────────────
